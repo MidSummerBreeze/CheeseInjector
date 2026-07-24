@@ -4,13 +4,11 @@ A high-performance Minecraft hot-injection cheat tool that manipulates game memo
 
 ---
 
-## English
-
-### Overview
+## Overview
 
 CheeseInjector is a runtime cheat injection framework for Minecraft. It attaches to a running game process via JNI and native hooks, enabling live memory patching, bytecode manipulation, and game logic overriding — all without relaunching the client.
 
-### Key Features
+## Key Features
 
 - **Hot Injection** – Attach to Minecraft while it's already running. No restart needed.
 - **Native & JNI Hooking** – Low-level memory access via platform-specific native code and Java Native Interface.
@@ -18,7 +16,7 @@ CheeseInjector is a runtime cheat injection framework for Minecraft. It attaches
 - **Real-time Memory Patching** – Modify values, flags, and game state instantly.
 - **Stealth-oriented Design** – Bypass basic client integrity checks (educational/research purposes).
 
-### Injection Capabilities
+## Injection Capabilities
 
 | Capability | Description |
 |------------|-------------|
