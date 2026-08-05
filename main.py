@@ -1,13 +1,51 @@
 import sys
 import os
 import ctypes
+from ctypes import wintypes
 import psutil
 import threading
+import subprocess
+import tempfile
+import re
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QTableWidget, QTableWidgetItem,
-                             QHeaderView, QLabel, QFrame, QMessageBox, QGraphicsOpacityEffect)
+                             QHeaderView, QLabel, QFrame, QMessageBox)
 from PyQt5.QtCore import Qt, QTimer, QPoint, pyqtSignal, QThread, QPropertyAnimation, QEasingCurve
 from PyQt5.QtGui import QFont, QColor
+
+
+def show_taskdialog_error(parent_hwnd, title, main_instruction, content):
+    comctl32 = ctypes.windll.comctl32
+    comctl32.InitCommonControls()
+    
+    TDCBF_OK_BUTTON = 0x0001
+    TD_ERROR_ICON = 0xFFFE
+    
+    comctl32.TaskDialog.argtypes = [
+        wintypes.HWND,
+        wintypes.HINSTANCE,
+        ctypes.c_wchar_p,
+        ctypes.c_wchar_p,
+        ctypes.c_wchar_p,
+        ctypes.c_uint,
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_int)
+    ]
+    comctl32.TaskDialog.restype = ctypes.c_long
+    
+    response = ctypes.c_int()
+    result = comctl32.TaskDialog(
+        parent_hwnd,
+        None,
+        title,
+        main_instruction,
+        content,
+        TDCBF_OK_BUTTON,
+        ctypes.c_void_p(TD_ERROR_ICON),
+        ctypes.byref(response)
+    )
+    return result == 0
+
 
 def is_admin() -> bool:
     try:
@@ -15,47 +53,103 @@ def is_admin() -> bool:
     except:
         return False
 
-def run_as_admin():
-    script = os.path.abspath(sys.argv[0])
-    params = ' '.join([f'"{arg}"' for arg in sys.argv[1:]])
-    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, f'"{script}" {params}', None, 1)
-    sys.exit()
 
-PROCESS_ALL_ACCESS = 0x1F0FFF
-MEM_COMMIT_RESERVE = 0x3000
-PAGE_EXECUTE_READWRITE = 0x40
-SHELLCODE = bytearray([0x0F, 0x0B])
+def inject_using_powershell(pid: int) -> tuple:
+    ps_script = f'''
+$targetPid = {pid}
+Write-Host "Target process PID: $targetPid, Start injecting..." -ForegroundColor Yellow
 
-class WinAPI:
-    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public class WinAPI {{
+    [DllImport("kernel32.dll", SetLastError=true)]
+    public static extern IntPtr OpenProcess(int dwDesiredAccess, bool bInheritHandle, int dwProcessId);
+    [DllImport("kernel32.dll", SetLastError=true)]
+    public static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, int dwSize, int flAllocationType, int flProtect);
+    [DllImport("kernel32.dll", SetLastError=true)]
+    public static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, int nSize, out IntPtr lpNumberOfBytesWritten);
+    [DllImport("kernel32.dll", SetLastError=true)]
+    public static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, int dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, int dwCreationFlags, out int lpThreadId);
+    [DllImport("kernel32.dll", SetLastError=true)]
+    public static extern bool CloseHandle(IntPtr hObject);
+    [DllImport("kernel32.dll", SetLastError=true)]
+    public static extern int GetLastError();
+}}
+'@
 
-    @staticmethod
-    def OpenProcess(dwDesiredAccess, bInheritHandle, dwProcessId):
-        return WinAPI.kernel32.OpenProcess(dwDesiredAccess, bInheritHandle, dwProcessId)
+$hProcess = [WinAPI]::OpenProcess(0x1F0FFF, $false, $targetPid)
+if ($hProcess -eq [IntPtr]::Zero) {{
+    $err = [WinAPI]::GetLastError()
+    Write-Host "OpenProcess failed, error code: $err" -ForegroundColor Red
+    exit 1
+}}
 
-    @staticmethod
-    def VirtualAllocEx(hProcess, lpAddress, dwSize, flAllocationType, flProtect):
-        return WinAPI.kernel32.VirtualAllocEx(hProcess, lpAddress, dwSize, flAllocationType, flProtect)
+$addr = [WinAPI]::VirtualAllocEx($hProcess, [IntPtr]::Zero, 2, 0x3000, 0x40)
+if ($addr -eq [IntPtr]::Zero) {{
+    $err = [WinAPI]::GetLastError()
+    Write-Host "VirtualAllocEx failed, error code: $err" -ForegroundColor Red
+    $null = [WinAPI]::CloseHandle($hProcess)
+    exit 1
+}}
 
-    @staticmethod
-    def WriteProcessMemory(hProcess, lpBaseAddress, lpBuffer, nSize):
-        lpNumberOfBytesWritten = ctypes.c_size_t(0)
-        result = WinAPI.kernel32.WriteProcessMemory(hProcess, lpBaseAddress, lpBuffer, nSize, ctypes.byref(lpNumberOfBytesWritten))
-        return result != 0, lpNumberOfBytesWritten.value
+Write-Host "Memory address: 0x$($addr.ToInt64().ToString('X'))" -ForegroundColor Gray
 
-    @staticmethod
-    def CreateRemoteThread(hProcess, lpStartAddress, lpParameter=0):
-        lpThreadId = ctypes.c_ulong(0)
-        hThread = WinAPI.kernel32.CreateRemoteThread(hProcess, None, 0, lpStartAddress, lpParameter, 0, ctypes.byref(lpThreadId))
-        return hThread, lpThreadId.value
+$shellcode = [byte[]]@(0x0F, 0x0B)
+$bytesWritten = [IntPtr]::Zero
+$null = [WinAPI]::WriteProcessMemory($hProcess, $addr, $shellcode, $shellcode.Length, [ref]$bytesWritten)
+if ($bytesWritten.ToInt32() -ne $shellcode.Length) {{
+    $err = [WinAPI]::GetLastError()
+    Write-Host "WriteProcessMemory failed, error code: $err" -ForegroundColor Red
+    $null = [WinAPI]::CloseHandle($hProcess)
+    exit 1
+}}
 
-    @staticmethod
-    def CloseHandle(hObject):
-        return WinAPI.kernel32.CloseHandle(hObject) != 0
+Write-Host "Shellcode Write successful, remote thread created..." -ForegroundColor Green
+$threadId = 0
+$null = [WinAPI]::CreateRemoteThread($hProcess, [IntPtr]::Zero, 0, $addr, [IntPtr]::Zero, 0, [ref]$threadId)
+if ($threadId -eq 0) {{
+    $err = [WinAPI]::GetLastError()
+    Write-Host "CreateRemoteThread failed, error code: $err" -ForegroundColor Red
+    $null = [WinAPI]::CloseHandle($hProcess)
+    exit 1
+}} else {{
+    Write-Host "Remote thread has been created (ID: $threadId), The target process is about to crash." -ForegroundColor Green
+}}
+$null = [WinAPI]::CloseHandle($hProcess)
+Write-Host "Operation completed." -ForegroundColor Cyan
+exit 0
+'''
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False) as f:
+            f.write(ps_script)
+            script_path = f.name
+        cmd = ['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script_path]
+        creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, creationflags=creationflags)
+        stdout, stderr = process.communicate(timeout=30)
+        try:
+            os.unlink(script_path)
+        except:
+            pass
+        output = stdout + stderr
+        if process.returncode != 0:
+            error_match = re.search(r'error code:\s*(\d+)', output)
+            if error_match:
+                error_code = int(error_match.group(1))
+                return False, f"Injection failed (error: {error_code})", error_code
+            else:
+                return False, f"Injection failed (returncode: {process.returncode})", -1
+        else:
+            if "remote thread has been created" in output.lower():
+                return True, "Injection successful", 0
+            else:
+                return False, "Injection may have failed", -1
+    except subprocess.TimeoutExpired:
+        return False, "Injection timed out", -1
+    except Exception as e:
+        return False, f"Exception: {str(e)}", -1
 
-    @staticmethod
-    def GetLastError():
-        return ctypes.get_last_error()
 
 def get_window_title_for_pid(pid: int) -> str:
     from ctypes import wintypes, WINFUNCTYPE, byref, c_ulong
@@ -79,36 +173,6 @@ def get_window_title_for_pid(pid: int) -> str:
     ctypes.windll.user32.EnumWindows(enum_proc, 0)
     return titles[0] if titles else ""
 
-def inject_into_process(pid: int) -> tuple:
-    if not psutil.pid_exists(pid):
-        return False, "Process does not exist", -1
-
-    hProcess = WinAPI.OpenProcess(PROCESS_ALL_ACCESS, False, pid)
-    if hProcess == 0:
-        error = WinAPI.GetLastError()
-        return False, f"OpenProcess failed (error: {error})", error
-
-    try:
-        addr = WinAPI.VirtualAllocEx(hProcess, 0, len(SHELLCODE), MEM_COMMIT_RESERVE, PAGE_EXECUTE_READWRITE)
-        if addr == 0:
-            error = WinAPI.GetLastError()
-            return False, f"VirtualAllocEx failed (error: {error})", error
-
-        success, bytes_written = WinAPI.WriteProcessMemory(hProcess, addr, bytes(SHELLCODE), len(SHELLCODE))
-        if not success or bytes_written != len(SHELLCODE):
-            error = WinAPI.GetLastError()
-            return False, f"WriteProcessMemory failed (error: {error})", error
-
-        hThread, thread_id = WinAPI.CreateRemoteThread(hProcess, addr)
-        if hThread == 0:
-            error = WinAPI.GetLastError()
-            return False, f"CreateRemoteThread failed (error: {error})", error
-
-        WinAPI.CloseHandle(hThread)
-        return True, f"Remote thread created (ID: {thread_id})", 0
-
-    finally:
-        WinAPI.CloseHandle(hProcess)
 
 class ScannerThread(QThread):
     finished = pyqtSignal(list)
@@ -137,6 +201,7 @@ class ScannerThread(QThread):
             self.status_update.emit('error', f'Scan error: {str(e)}')
             self.finished.emit([])
 
+
 class InjectorWindow(QMainWindow):
     injection_result = pyqtSignal(bool, str, int)
 
@@ -160,7 +225,7 @@ class InjectorWindow(QMainWindow):
 
         self.setup_ui()
         self.apply_styles()
-        self.update_status('idle', 'Ready — Click "Scan Processes" to target Minecraft for cheat injection')
+        self.update_status('idle', 'Ready — click "Scan Processes" to begin')
 
         self.injection_result.connect(self.on_injection_result)
 
@@ -194,7 +259,7 @@ class InjectorWindow(QMainWindow):
         title_label.setObjectName("titleLabel")
         title_bar_layout.addWidget(title_label)
 
-        subtitle_label = QLabel("— Cheat Client")
+        subtitle_label = QLabel("— Minecraft Cheat Client")
         subtitle_label.setObjectName("subtitleLabel")
         title_bar_layout.addWidget(subtitle_label)
         title_bar_layout.addStretch()
@@ -203,7 +268,7 @@ class InjectorWindow(QMainWindow):
         self.min_btn.setObjectName("minBtn")
         self.min_btn.setFixedSize(28, 28)
         self.min_btn.setCursor(Qt.PointingHandCursor)
-        self.min_btn.clicked.connect(self.minimize_with_animation)
+        self.min_btn.clicked.connect(self.showMinimized)
         title_bar_layout.addWidget(self.min_btn)
 
         self.close_btn = QPushButton("✕")
@@ -223,12 +288,10 @@ class InjectorWindow(QMainWindow):
 
         action_row = QHBoxLayout()
         action_row.setSpacing(8)
-
         self.scan_btn = QPushButton("Scan Processes")
         self.scan_btn.setObjectName("scanBtn")
         self.scan_btn.setCursor(Qt.PointingHandCursor)
         self.scan_btn.clicked.connect(self.scan_processes)
-        self.setup_button_animation(self.scan_btn)
         action_row.addWidget(self.scan_btn)
 
         self.inject_btn = QPushButton("Inject")
@@ -236,9 +299,7 @@ class InjectorWindow(QMainWindow):
         self.inject_btn.setCursor(Qt.PointingHandCursor)
         self.inject_btn.setEnabled(False)
         self.inject_btn.clicked.connect(self.inject)
-        self.setup_button_animation(self.inject_btn)
         action_row.addWidget(self.inject_btn)
-
         action_row.addStretch()
         content_layout.addLayout(action_row)
 
@@ -270,7 +331,7 @@ class InjectorWindow(QMainWindow):
         table_layout.addWidget(self.table)
         content_layout.addWidget(table_frame)
 
-        hint_label = QLabel("Click a process row to select target, then inject cheat code.")
+        hint_label = QLabel("Click a process row to select target, then press Inject.")
         hint_label.setObjectName("hintLabel")
         content_layout.addWidget(hint_label)
 
@@ -286,7 +347,7 @@ class InjectorWindow(QMainWindow):
         self.status_dot.setFixedSize(8, 8)
         status_layout.addWidget(self.status_dot)
 
-        self.status_text = QLabel("Ready — Click \"Scan Processes\" to target Minecraft for cheat injection")
+        self.status_text = QLabel("Ready — waiting for action")
         self.status_text.setObjectName("statusText")
         status_layout.addWidget(self.status_text)
         status_layout.addStretch()
@@ -294,47 +355,12 @@ class InjectorWindow(QMainWindow):
 
         frame_layout.addWidget(content)
 
-        self.setFixedSize(620, 520)
+        self.setFixedSize(720, 520)
         self.clear_table()
 
         self.pulse_timer = QTimer()
         self.pulse_timer.timeout.connect(self.pulse_status_dot)
         self.pulse_state = False
-
-    def setup_button_animation(self, button):
-        effect = QGraphicsOpacityEffect()
-        button.setGraphicsEffect(effect)
-        anim = QPropertyAnimation(effect, b"opacity")
-        anim.setDuration(150)
-        anim.setEasingCurve(QEasingCurve.OutQuad)
-
-        def on_pressed():
-            anim.stop()
-            anim.setStartValue(1.0)
-            anim.setEndValue(0.6)
-            anim.start()
-
-        def on_released():
-            anim.stop()
-            anim.setStartValue(0.6)
-            anim.setEndValue(1.0)
-            anim.start()
-
-        button.pressed.connect(on_pressed)
-        button.released.connect(on_released)
-
-    def minimize_with_animation(self):
-        self.min_anim = QPropertyAnimation(self, b"windowOpacity")
-        self.min_anim.setDuration(300)
-        self.min_anim.setStartValue(1.0)
-        self.min_anim.setEndValue(0.0)
-        self.min_anim.setEasingCurve(QEasingCurve.InCubic)
-        self.min_anim.finished.connect(self._finish_minimize)
-        self.min_anim.start()
-
-    def _finish_minimize(self):
-        self.showMinimized()
-        self.setWindowOpacity(1.0)
 
     def clear_table(self):
         self.table.clearContents()
@@ -393,12 +419,11 @@ class InjectorWindow(QMainWindow):
             padding: 7px 18px;
             font-size: 12.5px;
             font-weight: 500;
-            border: 1px solid transparent;
         }
         #scanBtn {
             background-color: #ffffff;
             color: #1a1d23;
-            border-color: #e8eaef;
+            border: 1px solid #e8eaef;
         }
         #scanBtn:hover {
             background-color: #fafbfc;
@@ -415,7 +440,7 @@ class InjectorWindow(QMainWindow):
         #injectBtn {
             background-color: #4f6ef6;
             color: #ffffff;
-            border-color: #4f6ef6;
+            border: 1px solid #4f6ef6;
         }
         #injectBtn:hover {
             background-color: #3d5de0;
@@ -443,20 +468,18 @@ class InjectorWindow(QMainWindow):
             font-family: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
             font-size: 12px;
         }
-        QTableWidget::item {
-            border: none;
+        #processTable::item {
             padding: 8px 12px;
+            border: none;
         }
-        QTableWidget::item:selected {
-            background-color: #eef2fb;
-        }
-        QTableWidget::item:selected:first {
-            border-left: 3px solid #4f6ef6;
-        }
-        QTableWidget::item:hover {
+        #processTable::item:hover {
             background-color: #f5f7fa;
         }
-        QTableWidget QHeaderView::section {
+        #processTable::item:selected {
+            background-color: #eef2fb;
+            color: #1a1d23;
+        }
+        #processTable QHeaderView::section {
             background-color: #f9fafb;
             color: #4a5060;
             font-size: 11px;
@@ -467,7 +490,7 @@ class InjectorWindow(QMainWindow):
             border-bottom: 1px solid #e8eaef;
             letter-spacing: 0.02em;
         }
-        QTableWidget QTableCornerButton::section {
+        #processTable QTableCornerButton::section {
             background-color: #f9fafb;
             border: none;
         }
@@ -564,13 +587,13 @@ class InjectorWindow(QMainWindow):
             return
         self.table.setRowCount(len(processes))
         for i, proc in enumerate(processes):
-            name_item = QTableWidgetItem(proc['name'])
-            name_item.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(i, 0, name_item)
-
-            title_item = QTableWidgetItem(proc['title'])
-            title_item.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(i, 1, title_item)
+            item0 = QTableWidgetItem(proc['name'])
+            item0.setTextAlignment(Qt.AlignCenter)
+            self.table.setItem(i, 0, item0)
+            
+            item1 = QTableWidgetItem(proc['title'])
+            item1.setTextAlignment(Qt.AlignCenter)
+            self.table.setItem(i, 1, item1)
         self.table.resizeColumnToContents(0)
 
     def on_table_item_clicked(self, item):
@@ -597,9 +620,9 @@ class InjectorWindow(QMainWindow):
         item.setTextAlignment(Qt.AlignCenter)
         item.setForeground(QColor(154, 160, 176))
         self.table.setItem(0, 1, item)
-        for col in range(2):
-            if col != 1:
-                self.table.setItem(0, col, QTableWidgetItem(""))
+        item0 = QTableWidgetItem("")
+        item0.setTextAlignment(Qt.AlignCenter)
+        self.table.setItem(0, 0, item0)
 
         self.update_status('scanning', 'Scanning for Minecraft processes...')
         self.scanner_thread = ScannerThread()
@@ -620,8 +643,8 @@ class InjectorWindow(QMainWindow):
         if self.is_injecting or not self.selected_pid:
             return
         if not is_admin():
-            QMessageBox.warning(self, "Administrator Required",
-                                "Injection requires administrator privileges.\n\nPlease restart the application as Administrator.")
+            QMessageBox.critical(self, "Administrator Required",
+                                 "This application requires administrator privileges to inject.\nPlease restart the program as Administrator.")
             return
 
         pid = self.selected_pid
@@ -634,7 +657,7 @@ class InjectorWindow(QMainWindow):
 
     def _do_injection(self, pid):
         try:
-            success, message, error_code = inject_into_process(pid)
+            success, message, error_code = inject_using_powershell(pid)
             self.injection_result.emit(success, message, error_code)
         except Exception as e:
             self.injection_result.emit(False, f"Exception: {str(e)}", -1)
@@ -644,7 +667,7 @@ class InjectorWindow(QMainWindow):
         self.inject_btn.setEnabled(True)
         self.scan_btn.setEnabled(True)
         if success:
-            self.update_status('success', 'Injection successful')
+            self.update_status('success', f'Injection successful — {message}')
         else:
             self.update_status('error', f'Injection failed — {message}')
 
@@ -667,10 +690,8 @@ class InjectorWindow(QMainWindow):
     def quit_application(self):
         QApplication.quit()
 
+
 def main():
-    if not is_admin():
-        run_as_admin()
-        return
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     app = QApplication(sys.argv)
@@ -678,8 +699,17 @@ def main():
     app.setApplicationName("Cheese Injector")
     font = QFont("Segoe UI", 9)
     app.setFont(font)
+
+    if not is_admin():
+        title = "Administrator Required"
+        main_instruction = "Cheese Injector"
+        content = "This application requires administrator privileges to run.\n\nPlease restart the program as Administrator."
+        show_taskdialog_error(None, title, main_instruction, content)
+        sys.exit(1)
+
     window = InjectorWindow()
     sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     main()
