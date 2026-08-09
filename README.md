@@ -1,58 +1,73 @@
-# 🧀 CheeseInjector
+# Cheese Injector
 
-> *Inject like a rat, run like a fireworks.*
-
-**CheeseInjector** is a hot‑injection cheat framework for Minecraft (Java Edition).  
-It attaches to a running game process — no mods, no plugin folders, no restarts.  
-Just point, inject, and watch the Swiss‑cheese logic take over.
-
----
+A modern, lightweight **cheat injector** designed specifically for Minecraft Java Edition. Built with Python and PyQt5, featuring a frameless custom UI with a cyan-themed sidebar layout, used to inject cheat clients into the Minecraft process.
 
 ## ✨ Features
 
-- **🔥 Hot‑in‑memory injection** – attaches to live JVM instances without modifying game files.
-- **🧀 Bypass‑oriented design** – evades basic integrity checks (for educational research only).
-- **⚡ Runtime command engine** – type your wishes, see them materialise mid‑game.
-- **🕵️ Minimal footprint** – small agent JAR, cleans up after itself on detach.
-- **🎯 Targeted hooks** – movement, render, world, and network layers (toggle individually).
+- **Modern UI**: Frameless window with a gradient sidebar, animated buttons with color transitions, and clean typography (forced Segoe UI font).
+- **Process Scanning**: Multi-threaded scanning to quickly and accurately locate `java.exe` and `javaw.exe` processes.
+- **Heuristic Bypass**: Utilizes a dynamically executed PowerShell script to delegate WinAPI calls, effectively avoiding dynamic heuristic detection by antiviruses on the Python interpreter itself.
+- **Single File Build**: Easily compiles into a standalone `.exe` executable using Nuitka.
 
----
+## 📂 Project Structure
 
-## 📦 Modules
+```text
+CheeseInjector/
+├── main.py                 # Application entry point
+├── build.bat               # Robust Nuitka build script
+├── requirements.txt        # Dependencies list
+├── core/                   # Core logic layer
+│   ├── scanner.py          # Java process scanner thread
+│   ├── injector.py         # PS1 script caller
+│   └── injector.ps1        # WinAPI injection script
+├── ui/                     # User interface components
+│   ├── styles.py           # QSS Stylesheet
+│   ├── animated_button.py  # Custom button with color transition
+│   ├── main_window.py      # Main application window
+│   ├── sidebar.py          # Left sidebar panel
+│   ├── content_header.py   # Top draggable header
+│   ├── process_table.py    # Process list table
+│   └── status_bar.py       # Bottom status indicator
+└── utils/                  # Utilities
+    ├── admin.py            # Admin privilege check
+    ├── dialogs.py          # Native Windows dialogs
+    └── window_utils.py     # Window title enumeration
+```
 
-| Module | Effect |
-|--------|--------|
-| `movement` | Flight, speed, step, no‑fall |
-| `render` | X‑ray, nametags, esp boxes |
-| `world` | Nuker, scaffold, auto‑eat |
-| `network` | Packet spoofing, timer, anti‑kick |
+## 🚀 Getting Started
 
-Each module can be enabled/disabled at runtime via the built‑in console.
+### Prerequisites
 
----
+- Windows OS (Due to the use of underlying WinAPI and PowerShell)
+- Python 3.8 or higher
 
-## 🧠 Philosophy
+### Installation & Running
 
-CheeseInjector is built for **learning JVM internals, bytecode manipulation, and runtime patching**.  
-It is not a “get rich” cheat – it’s a playground for reverse engineering enthusiasts.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/MidSummerBreeze/CheeseInjector.git
+   ```
 
-> Use it only on servers you own or have explicit permission to test.  
-> The author is not responsible for any bans, melted GPUs, or existential cheese crises.
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
----
+3. Run the application (**Note: Must be run as Administrator**):
+   ```bash
+   python main.py
+   ```
 
-## 🙋 FAQ
+## 🛠️ Building from Source
 
-**Q: Will this get me banned?**  
-A: Probably, if you use it on public servers. Don’t.
+To compile the project into a standalone `.exe` executable, simply run the provided build script. This script is highly robust: it automatically cleans up previous build artifacts, checks the Python environment and dependencies, and starts the Nuitka compilation process.
 
-**Q: Why “CheeseInjector”?**  
-A: Because rats like cheese, and we inject like one. Also, it sounds delicious.
+```bash
+build.bat
+```
 
-**Q: Can I contribute?**  
-A: Sure! Open a PR with your stinkiest feature.
+Once completed, the final executable `CheeseInjector.exe` will be generated in the `dist/` directory.
 
----
+## ⚠️ Disclaimer
 
-*Remember: With great cheese comes great responsibility.*  
-🐭🧀🚀
+This software is a game cheat injector provided solely for educational purposes, reverse engineering research, and cybersecurity defense studies. The author assumes no legal responsibility for any misuse of this tool. Using cheats disrupts game balance and inherently violates the Terms of Service of most multiplayer online games (including Minecraft), which may result in account bans. All risks and consequences arising from the use of this tool are borne solely by the user.
