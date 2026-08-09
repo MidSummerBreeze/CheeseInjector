@@ -1,0 +1,1 @@
+# Utility helpers for admin checks, dialogs, and window enumeration
