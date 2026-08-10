@@ -3,8 +3,8 @@
 <p align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.8+-blue.svg" alt="Python 3.8+"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-red.svg" alt="License: AGPL-3.0"></a>
-  <a href="https://github.com/yourusername/CheeseInjector/stargazers"><img src="https://img.shields.io/github/stars/yourusername/CheeseInjector?style=social" alt="Stars"></a>
-  <a href="https://github.com/yourusername/CheeseInjector/network/members"><img src="https://img.shields.io/github/forks/yourusername/CheeseInjector?style=social" alt="Forks"></a>
+  <a href="https://github.com/MidSummerBreeze/CheeseInjector/stargazers"><img src="https://img.shields.io/github/stars/MidSummerBreeze/CheeseInjector?style=social" alt="Stars"></a>
+  <a href="https://github.com/MidSummerBreeze/CheeseInjector/network/members"><img src="https://img.shields.io/github/forks/MidSummerBreeze/CheeseInjector?style=social" alt="Forks"></a>
 </p>
 
 A next-gen Minecraft cheat injector. Dominates the game with stealthy payload execution, multi-threaded process targeting, and a stunning native Windows 11 Acrylic UI. Built with Python and PyQt5.
