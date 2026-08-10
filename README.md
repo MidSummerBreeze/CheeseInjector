@@ -1,18 +1,11 @@
 # Cheese Injector
 
 <p align="center">
-  <img src="./860x560.webp" width="860">
-</p>
-
-<p align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.8+-blue.svg" alt="Python 3.8+"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-red.svg" alt="License: AGPL-3.0"></a>
   <a href="https://github.com/yourusername/CheeseInjector/stargazers"><img src="https://img.shields.io/github/stars/yourusername/CheeseInjector?style=social" alt="Stars"></a>
   <a href="https://github.com/yourusername/CheeseInjector/network/members"><img src="https://img.shields.io/github/forks/yourusername/CheeseInjector?style=social" alt="Forks"></a>
 </p>
-
-> 💡 **Looking for a modern PyQt5 UI template?** 
-> This project provides a stunning native Windows 11 Acrylic design with smooth custom scrolling, animated toasts, and a clean modular architecture. **Feel free to fork it as a scaffold for your own desktop tools!**
 
 A next-gen Minecraft cheat injector. Dominates the game with stealthy payload execution, multi-threaded process targeting, and a stunning native Windows 11 Acrylic UI. Built with Python and PyQt5.
 
