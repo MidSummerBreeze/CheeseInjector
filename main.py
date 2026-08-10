@@ -8,23 +8,17 @@ from ui.main_window import InjectorWindow
 
 
 def main():
-    # Crisp rendering on high-DPI displays
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setApplicationName("Cheese Injector")
     app.setFont(QFont("Segoe UI", 9))
-
-    # Injection requires elevated privileges
     if not is_admin():
         show_admin_required_dialog()
         sys.exit(1)
-
     window = InjectorWindow()
     sys.exit(app.exec_())
-
 
 if __name__ == "__main__":
     main()

@@ -1,12 +1,29 @@
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel, QVBoxLayout, QWidget, QAbstractItemView
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
+from ui.animated_scrollbar import AnimatedScrollBar
+
+
+class SmoothScrollTable(QTableWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # Enable pixel-by-pixel scrolling for a smoother experience
+        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        
+        # Use custom scrollbar to prevent native bugs
+        self.setVerticalScrollBar(AnimatedScrollBar(Qt.Vertical, self))
+        self.setHorizontalScrollBar(AnimatedScrollBar(Qt.Horizontal, self))
+
+    def wheelEvent(self, event):
+        # Directly let the underlying view handle the pixel scroll
+        # This eliminates any animation skipping bugs
+        super().wheelEvent(event)
 
 
 class ProcessTable(QWidget):
     process_selected = pyqtSignal(dict)
     process_double_clicked = pyqtSignal(dict)
-
     COLUMNS = ["PID", "Process", "Window Title"]
 
     def __init__(self, parent=None):
@@ -19,7 +36,7 @@ class ProcessTable(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self.table = QTableWidget()
+        self.table = SmoothScrollTable()
         self.table.setObjectName("tableWidget")
         self.table.setColumnCount(len(self.COLUMNS))
         self.table.setHorizontalHeaderLabels(self.COLUMNS)
@@ -27,6 +44,16 @@ class ProcessTable(QWidget):
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        
+        # Disable editing and header interaction
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.table.horizontalHeader().setSectionsClickable(False)
+        self.table.horizontalHeader().setHighlightSections(False)
+        
+        # Force header to use QSS and become transparent for Acrylic
+        self.table.horizontalHeader().setAttribute(Qt.WA_StyledBackground, True)
+        self.table.horizontalHeader().setAutoFillBackground(False)
+        self.table.horizontalHeader().setDefaultAlignment(Qt.AlignCenter)
         
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)

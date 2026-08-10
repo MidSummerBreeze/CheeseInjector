@@ -1,24 +1,20 @@
-# Modern Sidebar Layout - Cyan Theme
+# Modern Sidebar Layout - Cyan Theme with Acrylic Support
 
 MAIN_STYLESHEET = """
 #rootFrame {
-    background-color: #FFFFFF;
+    background-color: rgba(255, 255, 255, 200);
     border-radius: 12px;
-    border: 1px solid #E5E7EB;
 }
 
 #sidebar {
-    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
-                                      stop:0 #ECFEFF, 
-                                      stop:0.5 #F0FDFA, 
-                                      stop:1 #FFFFFF);
+    background-color: rgba(236, 254, 255, 130);
     border-top-left-radius: 12px;
     border-bottom-left-radius: 12px;
-    border-right: 1px solid #E2E8F0;
+    border-right: 1px solid rgba(255, 255, 255, 100);
 }
 
 #contentArea {
-    background-color: #FFFFFF;
+    background-color: transparent;
     border-top-right-radius: 12px;
     border-bottom-right-radius: 12px;
 }
@@ -26,42 +22,43 @@ MAIN_STYLESHEET = """
 #appName {
     color: #0F172A;
     font-size: 20px;
-    font-weight: 800;
+    font-weight: 550;
     letter-spacing: -0.02em;
     font-family: 'Segoe UI', sans-serif;
 }
 #appDesc {
-    color: #94A3B8;
+    color: #0E7490;
     font-size: 11px;
     font-weight: 500;
     font-family: 'Segoe UI', sans-serif;
 }
 
 #contentHeader {
-    border-bottom: 1px solid #F1F5F9;
+    background-color: rgba(255, 255, 255, 50);
+    border-bottom: 1px solid rgba(255, 255, 255, 150);
 }
 #headerTitle {
     color: #0F172A;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     font-family: 'Segoe UI', sans-serif;
 }
 
 #minBtn, #closeBtn {
-    background: transparent;
+    background: rgba(255, 255, 255, 100);
     border: none;
     border-radius: 6px;
-    font-size: 14px;
-    color: #94A3B8;
+    font-size: 13px;
+    color: #475569;
     padding: 0;
 }
 #minBtn:hover {
-    background: #F1F5F9;
+    background: rgba(241, 245, 249, 220);
     color: #0F172A;
 }
 #closeBtn:hover {
-    background: #FEF2F2;
-    color: #EF4444;
+    background: rgba(239, 68, 68, 180);
+    color: #FFFFFF;
 }
 
 #tableWidget {
@@ -70,31 +67,34 @@ MAIN_STYLESHEET = """
     gridline-color: transparent;
     font-family: 'Segoe UI', sans-serif;
     font-size: 12px;
-    selection-background-color: #ECFEFF;
+    outline: none;
 }
 #tableWidget::item {
     padding: 14px 16px;
-    border-bottom: 1px solid #F1F5F9;
+    border-bottom: 1px solid rgba(226, 232, 240, 150);
     color: #334155;
 }
-#tableWidget::item:hover {
-    background-color: #F8FAFC;
-}
 #tableWidget::item:selected {
-    background-color: #ECFEFF;
-    color: #0F172A;
+    background-color: #CFFAFE;
+    color: #0E7490;
+    font-weight: 600;
+}
+
+/* Force header background transparent and text centered */
+#tableWidget QHeaderView {
+    background-color: transparent;
+    border: none;
 }
 #tableWidget QHeaderView::section {
     background-color: transparent;
-    color: #94A3B8;
-    font-size: 10px;
-    font-weight: 700;
+    color: #64748B;
+    font-size: 11px;
+    font-weight: 600;
     font-family: 'Segoe UI', sans-serif;
     padding: 12px 16px;
     border: none;
-    border-bottom: 1px solid #E2E8F0;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    border-bottom: 1px solid rgba(255, 255, 255, 150);
+    text-align: center;
 }
 #tableWidget QTableCornerButton::section {
     background-color: transparent;
@@ -102,20 +102,25 @@ MAIN_STYLESHEET = """
 }
 
 #emptyLabel {
-    color: #94A3B8;
+    color: #64748B;
     font-size: 12px;
     font-family: 'Segoe UI', sans-serif;
 }
 
-#statusCard {
+/* Toast Styles */
+#toast {
     background-color: #FFFFFF;
+    border-radius: 8px;
     border: 1px solid #E2E8F0;
-    border-radius: 10px;
 }
-#statusText {
-    font-size: 11px;
-    color: #64748B;
-    font-family: 'Segoe UI', sans-serif;
+#toastTitle {
+    font-size: 13px;
     font-weight: 600;
+    font-family: 'Segoe UI', sans-serif;
+}
+#toastMessage {
+    color: #334155;
+    font-size: 12px;
+    font-family: 'Segoe UI', sans-serif;
 }
 """

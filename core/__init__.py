@@ -1,1 +1,1 @@
-# Core logic: process scanning and shellcode injection
+# Core logic

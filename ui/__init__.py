@@ -1,1 +1,1 @@
-# UI components: window, title bar, table, status bar, styles
+# UI components

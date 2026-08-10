@@ -1,7 +1,3 @@
-# core/injector.ps1
-# This script performs the actual WinAPI injection. 
-# It is called by Python to bypass heuristic dynamic scans.
-
 param (
     [int]$targetPid
 )
