@@ -1,13 +1,33 @@
 # Cheese Injector
 
-A modern, lightweight **cheat injector** designed specifically for Minecraft Java Edition. Built with Python and PyQt5, featuring a frameless custom UI with a cyan-themed sidebar layout, used to inject cheat clients into the Minecraft process.
+<p align="center">
+  <img src="./860x560.webp" width="860">
+</p>
+
+<p align="center">
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.8+-blue.svg" alt="Python 3.8+"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-red.svg" alt="License: AGPL-3.0"></a>
+  <a href="https://github.com/yourusername/CheeseInjector/stargazers"><img src="https://img.shields.io/github/stars/yourusername/CheeseInjector?style=social" alt="Stars"></a>
+  <a href="https://github.com/yourusername/CheeseInjector/network/members"><img src="https://img.shields.io/github/forks/yourusername/CheeseInjector?style=social" alt="Forks"></a>
+</p>
+
+> 💡 **Looking for a modern PyQt5 UI template?** 
+> This project provides a stunning native Windows 11 Acrylic design with smooth custom scrolling, animated toasts, and a clean modular architecture. **Feel free to fork it as a scaffold for your own desktop tools!**
+
+A next-gen Minecraft cheat injector. Dominates the game with stealthy payload execution, multi-threaded process targeting, and a stunning native Windows 11 Acrylic UI. Built with Python and PyQt5.
 
 ## ✨ Features
 
-- **Modern UI**: Frameless window with a gradient sidebar, animated buttons with color transitions, and clean typography (forced Segoe UI font).
-- **Process Scanning**: Multi-threaded scanning to quickly and accurately locate `java.exe` and `javaw.exe` processes.
-- **Heuristic Bypass**: Utilizes a dynamically executed PowerShell script to delegate WinAPI calls, effectively avoiding dynamic heuristic detection by antiviruses on the Python interpreter itself.
-- **Single File Build**: Easily compiles into a standalone `.exe` executable using Nuitka.
+### 💉 Injector Capabilities
+- **Stealthy Execution**: Delegates critical API calls to avoid dynamic heuristic detection, ensuring silent background delivery.
+- **Multi-threaded Targeting**: Instantly locates `java.exe` and `javaw.exe` processes with accurate window title enumeration.
+- **Undetected Payload Delivery**: Advanced execution techniques ensure your payload runs without triggering anti-cheat alarms.
+
+### 🎨 Premium UI / UX (Perfect for Forking)
+- **Native Windows 11 Acrylic**: True `SetWindowCompositionAttribute` implementation for a flawless frosted-glass effect. Automatically falls back to a flat design on Windows 10.
+- **Smooth Custom Scrollbars**: Handcrafted `AnimatedScrollBar` replacing native Qt scrollbars to eliminate jumping bugs and provide macOS-like smooth pixel scrolling.
+- **Animated Toast Notifications**: Non-intrusive, modern notification system with sliding animations and progress bars.
+- **Fully Frameless**: Custom dragable title bar with animated minimize/close buttons.
 
 ## 📂 Project Structure
 
@@ -17,28 +37,29 @@ CheeseInjector/
 ├── build.bat               # Robust Nuitka build script
 ├── requirements.txt        # Dependencies list
 ├── core/                   # Core logic layer
-│   ├── scanner.py          # Java process scanner thread
-│   ├── injector.py         # PS1 script caller
-│   └── injector.ps1        # WinAPI injection script
+│   ├── scanner.py          # Multi-threaded Java process scanner
+│   ├── injector.py         # Execution delegator
+│   └── injector.ps1        # Stealthy WinAPI execution script
 ├── ui/                     # User interface components
-│   ├── styles.py           # QSS Stylesheet
-│   ├── animated_button.py  # Custom button with color transition
+│   ├── styles.py           # QSS Stylesheet (Easy to theme)
+│   ├── animated_button.py  # Buttons with smooth color transitions
+│   ├── animated_scrollbar.py # Bug-free custom scrollbar
 │   ├── main_window.py      # Main application window
 │   ├── sidebar.py          # Left sidebar panel
 │   ├── content_header.py   # Top draggable header
 │   ├── process_table.py    # Process list table
-│   └── status_bar.py       # Bottom status indicator
+│   └── toast.py            # Toast notification system
 └── utils/                  # Utilities
     ├── admin.py            # Admin privilege check
     ├── dialogs.py          # Native Windows dialogs
+    ├── acrylic.py          # Win11 Acrylic blur enabler
     └── window_utils.py     # Window title enumeration
 ```
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-
-- Windows OS (Due to the use of underlying WinAPI and PowerShell)
+- Windows 10/11 OS
 - Python 3.8 or higher
 
 ### Installation & Running
@@ -53,14 +74,22 @@ CheeseInjector/
    pip install -r requirements.txt
    ```
 
-3. Run the application (**Note: Must be run as Administrator**):
+3. Run the application (**Must be run as Administrator**):
    ```bash
    python main.py
    ```
 
-## 🛠️ Building from Source
+## 🛠️ Customization (For Forks)
 
-To compile the project into a standalone `.exe` executable, simply run the provided build script. This script is highly robust: it automatically cleans up previous build artifacts, checks the Python environment and dependencies, and starts the Nuitka compilation process.
+This project is designed to be highly modular. If you fork this as a UI template, customizing it is easy:
+
+- **Change Theme Color**: Open `ui/styles.py` and change the cyan values (e.g., `#06B6D4`) to your preferred color.
+- **Change Target Process**: Open `core/scanner.py` and modify the `JAVA_PROCESS_NAMES` set.
+- **Change Injected Payload**: Open `core/injector.ps1` and replace the `$shellcode` array with your own bytes.
+
+## 📦 Building from Source
+
+To compile the project into a standalone `.exe` executable, simply run the provided robust build script. It automatically cleans up previous artifacts, checks dependencies, and starts the Nuitka compilation process.
 
 ```bash
 build.bat
@@ -70,4 +99,4 @@ Once completed, the final executable `CheeseInjector.exe` will be generated in t
 
 ## ⚠️ Disclaimer
 
-This software is a game cheat injector provided solely for educational purposes, reverse engineering research, and cybersecurity defense studies. The author assumes no legal responsibility for any misuse of this tool. Using cheats disrupts game balance and inherently violates the Terms of Service of most multiplayer online games (including Minecraft), which may result in account bans. All risks and consequences arising from the use of this tool are borne solely by the user.
+This software is provided for educational purposes, reverse engineering research, and UI/UX design studies only. The author assumes no legal responsibility for any misuse of this tool. Using cheats disrupts game balance and inherently violates the Terms of Service of most multiplayer online games. All risks and consequences arising from the use of this tool are borne solely by the user.
